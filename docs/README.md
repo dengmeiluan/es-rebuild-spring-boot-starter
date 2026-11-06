@@ -17,6 +17,7 @@ Start with the role that matches your task. Every guide is current for ESQuerySt
 |---|---|
 | [Architecture](architecture.md) | Modules, dependency rules, page contract, runtime layers, deployment modes |
 | [Query workbench](query-workbench.md) | Six query modes, semantic completion, tree ⇄ text sync, relevance lab |
+| [Browser mode](browser-mode.md) | Same Vue console in the Chrome extension: transports, local stores, guarded actions and honest limits |
 | [Chrome extension](../extensions/chrome/README.md) | Front-end direct query workbench: capabilities, cut list, install and security |
 | [Design constitution](design.md) | Interaction rules and visual language for the console |
 | [Integration index](integration/README.md) | Index of client/host integration guides |

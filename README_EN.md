@@ -10,6 +10,7 @@
 [![Java](https://img.shields.io/badge/Java-8%2B-007396?logo=openjdk&logoColor=white)](https://openjdk.java.net)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.3.x-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Elasticsearch](https://img.shields.io/badge/Elasticsearch-7.6%2B-005571?logo=elasticsearch&logoColor=white)](https://www.elastic.co)
+[![Chrome extension](https://img.shields.io/badge/Chrome%20extension-MV3-4285F4?logo=googlechrome&logoColor=white)](extensions/chrome/README.md)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 [![CodeQL](https://github.com/dengmeiluan/esquerystudio/actions/workflows/codeql.yml/badge.svg)](https://github.com/dengmeiluan/esquerystudio/actions/workflows/codeql.yml)
@@ -20,6 +21,17 @@
 **[Five-minute integration](#-five-minute-integration)** · [中文 README](README.md) · [Query workbench](docs/query-workbench.md) · [Chrome extension](#-chrome-extension-native-vue-console-one-source-two-modes) · [Feature packs](#-feature-packs) · [Host integration](docs/integration/README.md) · [Architecture](docs/architecture.md)
 
 ---
+
+## ✨ What makes ESQueryStudio different
+
+| Differentiator | What it means in the product | Why it is uncommon |
+|---|---|---|
+| **Six modes, one live session** | DSL builder / raw editor, ES-SQL, Lucene, sandbox, PIT and syntax bridge switch in one page; tree, JSON, results, histogram, history and drafts stay together | Most consoles split query styles into unrelated tool pages |
+| **A real ES semantic layer** | Mapping, analysis, version, field roles and sortability drive completion, lint, value enums and pre-execution checks; tree ⇄ text stays in sync and unknown clauses fall back to raw JSON | Not "a few autocomplete keywords"; it prevents syntactically valid but semantically wrong queries |
+| **Relevance lab** | Score explain, rank detective, query X-ray, clause hit matrix, boost tuner and Profile flame graph share the query session | Most ES admin consoles do not treat "why did it hit / why is it slow" as a first-class workflow |
+| **One Vue source, two transports** | The same 52-page Vue console runs on a Spring Boot server or inside the Chrome extension; browser mode keeps local connections, monitoring, audit, jobs and guarded actions | No separate server UI and plugin UI to drift apart |
+| **Host-first, trimmable surface** | Page contract + 11 feature packs + `ConsoleHostIntegration` / auth / connection / audit SPI; disabled deep links land on an explainable page | Not a logo swap, and not a platform with business semantics hard-coded in it |
+| **Verifiable open-source delivery** | Full frontend/backend suites, real-browser probes, permission matrix, reproducible release, SBOM, CodeQL / Scorecard / Dependabot | It ships evidence, not only screenshots |
 
 ## 🎯 Core: a query workbench that understands Elasticsearch
 
@@ -246,13 +258,13 @@ components and styles are identical to server mode.
 ![Chrome extension: direct tool page](docs/screenshots/extension.png)
 
 - **Server mode**: the same Vue source is served by the Spring Boot server through `/internal/es/index`; all 52 pages, 11 packs and host SPI remain.
-- **Browser mode**: the extension runs the same Vue source in a `browser` build; the `api.ts` transport switches to direct Elasticsearch. The native connection layer stores credentials locally only.
+- **Browser mode**: the extension runs the same Vue source in a `browser` build; the `api.ts` transport switches to direct Elasticsearch. The native connection layer stores credentials locally only; multiple local profiles can be saved and switched from the top bar.
 - **Direct tool page**: right-click the extension icon for a lightweight debug page (DSL/Lucene/ES-SQL/PIT, Explain, REST, Reindex, monitor); it does not pretend to be the full console.
-- **Coverage**: indices, mappings, settings, aliases, templates, snapshots, ILM/SLM, Watcher, tasks, nodes, REST, SQL, PIT, reindex, bulk, managed rebuild, cross-cluster migration (client `scroll` + `_bulk`), config validation (L1 + L2 dry-run), config drift (local baseline) and system indices (local job locks) work; monitor history/alerts, operation audit and rebuild/migration jobs are stored locally in IndexedDB/localStorage behind the same API contract.
-- **Boundary**: browser mode has no cross-instance distributed lock or code provider; the system page shows local job locks and config drift compares against the first local baseline. Monitoring samples once per minute (page or service worker), stays local and never fabricates history; accounts remain Elasticsearch-native.
+- **Coverage**: indices, mappings, settings, aliases, templates, snapshots, ILM/SLM, Watcher, tasks, nodes, REST, SQL, PIT, reindex, bulk, managed rebuild, cross-cluster migration (client `scroll` + `_bulk`), config validation (L1 + L2 dry-run), config drift (local baseline) and system indices (local job locks) work. Task progress, settings impact and the guarded apply flow (local ES 7.10 classification + confirmToken), monitor history/alerts, operation audit and rebuild/migration jobs keep the same API contract while data stays in local IndexedDB/localStorage.
+- **Boundary**: browser mode has no cross-instance distributed lock or code provider; the system page shows local job locks and config drift compares against the first local baseline. Monitoring samples once per minute (an open console tab samples the current target; the service worker samples every local profile), stays local and never fabricates history; accounts remain Elasticsearch-native.
 - **Install**: open `chrome://extensions` → enable Developer mode → **Load unpacked** → select the folder containing `manifest.json` (`extensions/chrome` in the repo; extract the release zip first — do not select the zip itself).
 
-Details and security notes: [extensions/chrome/README.md](extensions/chrome/README.md).
+Browser-mode capability matrix and honest limits: [docs/browser-mode.md](docs/browser-mode.md). Install and security notes: [extensions/chrome/README.md](extensions/chrome/README.md).
 
 ---
 

@@ -15,8 +15,8 @@ ESQueryStudio is maintained on a best-effort basis. There is no commercial SLA.
 
 | Version | Status |
 |---|---|
-| `2.x` | Supported; fixes land on the latest minor |
-| `1.x` | End of life; no fixes |
+| `1.x` | Supported; fixes land on the latest patch |
+| `main` | Development branch; preview only, no compatibility promise |
 
 ## What to include in a bug report
 

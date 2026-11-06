@@ -1,7 +1,8 @@
 # 贡献指南
 
-感谢关注 ESQueryStudio！这是一个克制而专注的项目：**Elasticsearch 零停机重建 + 可嵌入的运维控制台**。
-平台内核、控制台与独立服务分模块交付，宿主按需接入。
+感谢关注 ESQueryStudio！这是一个以**查询工作台**为核心的 Elasticsearch 平台：
+六种查询模式共用一个现场，叠加零停机重建、可嵌入运维控制台与同源 Chrome 扩展。
+平台内核、控制台、独立服务与浏览器模式分模块交付，宿主按需接入。
 
 ## 项目结构
 
@@ -10,7 +11,8 @@
 | `platform/` | 页面契约、功能包、品牌与宿主 SPI（不依赖 ES 客户端） |
 | `modules/console/` | 引擎、控制台 HTTP API、鉴权、审计与内嵌 UI 资源 |
 | `apps/server/` | Kibana 式独立部署 |
-| `ui/` | Vue 3 + TypeScript 控制台源码 |
+| `ui/` | Vue 3 + TypeScript 控制台源码（服务端模式与 Chrome 浏览器模式共用） |
+| `extensions/chrome/` | MV3 Chrome 扩展：同一 Vue 控制台的 browser 构建 + 原生直连 transport |
 | `examples/demo-host/` | 最小宿主示例 |
 
 详见 [架构说明](docs/architecture.md) 与 [文档索引](docs/README.md)。

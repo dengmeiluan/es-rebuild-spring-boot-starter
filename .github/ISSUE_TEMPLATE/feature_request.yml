@@ -21,6 +21,7 @@ body:
       options:
         - client（业务应用侧）
         - console（宿主运维控制台）
+        - Chrome 扩展（浏览器模式直连 ES）
         - 从源码构建 / 开发
   - type: checkboxes
     id: ack

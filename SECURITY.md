@@ -28,8 +28,9 @@
 
 ## Chrome 扩展
 
-- 扩展直接连接用户选择的 Elasticsearch 地址，不经过第三方服务；凭据默认只存在本机，取消“记住凭据”时仅当前页面内存持有。
-- 扩展不提供第二套账号/角色/审计模型：权限与审计由 Elasticsearch 集群承担；REST 控制台可发起 reindex、tasks、snapshots 等管理操作，使用者接受风险。
+- 扩展直接连接用户选择的 Elasticsearch 地址，不经过第三方服务；连接档案与凭据保存在本机扩展存储（`localStorage` 及供 service worker 使用的 `chrome.storage.local` 镜像），不会上传到任何服务端。删除连接档案时同步移除本机凭据。
+- 浏览器模式的本机监控、审计与作业记录只写当前扩展 origin 的 IndexedDB/localStorage；它们是本机视图，不是跨实例合规审计账本。
+- 扩展不提供第二套账号/角色模型：权限由 Elasticsearch 集群承担；REST 控制台可发起 reindex、tasks、snapshots 等管理操作，使用者接受风险。
 - 安装包只从本仓库 Release 下载，并用 `SHA256SUMS` 校验；不要把扩展目录交给不可信来源二次打包。
 
 ## 已知取舍

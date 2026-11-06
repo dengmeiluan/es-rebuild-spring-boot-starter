@@ -4,6 +4,28 @@ All notable changes to ESQueryStudio are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Chrome extension / browser mode
+
+- Multiple local connection profiles with top-bar switching, BASIC / API Key auth
+  and real `ConnHealth` probe results; legacy single-profile storage migrates
+  automatically.
+- Browser-mode settings impact and guarded apply: local ES 7.10
+  DYNAMIC/STATIC/ILLEGAL classification, L1 value gate, static rebuild estimate,
+  in-page confirmToken bound to action + params, real `PUT /{index}/_settings`,
+  receipt toast and local `GUARDED_ACTION` audit record.
+- Reindex / update-by-query task progress mapped from `_tasks/<taskId>` to the
+  server `ReindexProgress` shape; vanished tasks are treated as completed.
+- Per-profile monitor and audit isolation (`connId`), per-profile alert state,
+  service-worker sampling for every saved profile, and a 20k-row local audit cap.
+- Browser-mode copy is now explicit about local storage and lossy boundaries:
+  mapping reconcile points to config drift, and cross-cluster migration hides the
+  server-only "按实体建 / FROM_ENTITY" mode.
+- Fixed first-run browser mode mounting three full-screen gates at once
+  (`LoginOverlay` + `SetupWizard` + `BrowserConnect`); focus now stays in the
+  single browser connection dialog and failed profile saves no longer reload.
+
 ## [1.0.0] — 2026-11-05
 
 First public release under the ESQueryStudio name. ESQueryStudio is the Elasticsearch

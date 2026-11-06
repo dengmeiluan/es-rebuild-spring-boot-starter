@@ -9,6 +9,7 @@
 [![Java](https://img.shields.io/badge/Java-8%2B-007396?logo=openjdk&logoColor=white)](https://openjdk.java.net)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.3.x-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Elasticsearch](https://img.shields.io/badge/Elasticsearch-7.6%2B-005571?logo=elasticsearch&logoColor=white)](https://www.elastic.co)
+[![Chrome extension](https://img.shields.io/badge/Chrome%20extension-MV3-4285F4?logo=googlechrome&logoColor=white)](extensions/chrome/README.md)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#贡献)
 [![CodeQL](https://github.com/dengmeiluan/esquerystudio/actions/workflows/codeql.yml/badge.svg)](https://github.com/dengmeiluan/esquerystudio/actions/workflows/codeql.yml)
@@ -19,6 +20,17 @@
 **[5 分钟接入](#-5-分钟接入)** · [English README](README_EN.md) · [查询工作台](docs/query-workbench.md) · [Chrome 扩展](#-chrome-扩展原生-vue-控制台双模式同源) · [功能包](#-功能包11-个模块按需上甲板) · [宿主集成](docs/integration/README.md) · [架构](docs/architecture.md)
 
 ---
+
+## ✨ 特色一页看懂
+
+| 特色 | 具体落地 | 为什么少见 |
+|---|---|---|
+| **六模式共用一个现场** | DSL 构建器 / 原始编辑器、ES-SQL、Lucene、沙盒、PIT、语法桥在同一页切换；条件树、JSON、结果、直方图、历史与草稿不丢 | 常见控制台把不同查询方式拆成互不相通的工具页 |
+| **真正懂 ES 的语义层** | mapping、analysis、版本、字段角色、可排序性一起参与补全、lint、值枚举与执行前检查；树 ⇄ 文本双向同步，未知子句退回原文 | 不是「补几个关键字」，而是降低「语法对、语义错」 |
+| **相关性实验室** | 打分解剖、排名侦探、查询 X 光、子句命中矩阵、Boost 调参、Profile 火焰图共享查询现场 | 大多数 ES 管理台不把「为什么命中/为什么慢」做成一等公民 |
+| **一套源码，两种形态** | 同一个 Vue 52 页控制台：Spring Boot 服务端模式 + Chrome 扩展浏览器模式；浏览器模式保留本机连接、监控、审计、作业与护栏执行 | 不需要维护「服务端 UI + 插件 UI」两套代码 |
+| **宿主优先、可裁剪** | 页面契约 + 11 个功能包 + `ConsoleHostIntegration` / 认证 / 连接目录 / 审计 SPI；深链停用页有可解释落地 | 不是只换 logo 的伪嵌入，也不是把业务语义硬编码进平台 |
+| **开源交付可验证** | 前后端全量测试、真实浏览器探针、权限矩阵、可复现 release、SBOM、CodeQL / Scorecard / Dependabot | 不只给演示截图，也给可重复运行的证据 |
 
 ## 🎯 核心：一块真正懂 Elasticsearch 的查询工作台
 
@@ -232,13 +244,13 @@ public ConsoleHostIntegration esQueryStudioHostIntegration() {
 ![Chrome 扩展：直连工具页](docs/screenshots/extension.png)
 
 - **服务端模式**：同一套 Vue 源码由 Spring Boot server 提供，经 `/internal/es/index` 后端适配；原有 52 页、11 功能包、宿主 SPI 全部保留。
-- **浏览器模式**：插件内运行同一套 Vue 源码的 `browser` 构建，`api.ts` 底层 transport 切换为浏览器直连 ES；首次连接在原生连接层填写地址，凭据只存本机。
+- **浏览器模式**：插件内运行同一套 Vue 源码的 `browser` 构建，`api.ts` 底层 transport 切换为浏览器直连 ES；首次连接在原生连接层填写地址，支持保存多个本机连接档案并在顶栏切换目标，凭据只存本机。
 - **直连工具页**：右键扩展图标打开轻量调试页（DSL/Lucene/ES-SQL/PIT、Explain、REST、Reindex、监控），不冒充完整控制台。
-- **覆盖**：索引/Mapping/Setting/别名/模板、快照/ILM/SLM/Watcher、任务/节点/REST/SQL/PIT/Reindex/Bulk/托管重建、跨集群迁移（客户端 scroll+bulk）、配置校验（L1+L2 dry-run）、配置漂移（本机基线）、系统索引（本机作业锁）均可用；监控历史/告警、操作审计、重建/迁移作业落在本机 IndexedDB/localStorage，页面仍走同一套 API 契约。
-- **边界**：浏览器模式没有跨实例分布式锁和代码 provider，系统索引页展示本机作业锁、配置漂移以本机首次基线为准；本机监控每分钟采样（页面或 service worker），只保存在本机，不伪造离线历史；账号由 Elasticsearch 自身认证。
+- **覆盖**：索引/Mapping/Setting/别名/模板、快照/ILM/SLM/Watcher、任务/节点/REST/SQL/PIT/Reindex/Bulk/托管重建、跨集群迁移（客户端 scroll+bulk）、配置校验（L1+L2 dry-run）、配置漂移（本机基线）、系统索引（本机作业锁）均可用；任务进度、索引设置影响预估与护栏执行（本机 ES 7.10 分类 + confirmToken）、监控历史/告警、操作审计、重建/迁移作业也走同一套 API 契约，数据落在本机 IndexedDB/localStorage。
+- **边界**：浏览器模式没有跨实例分布式锁和代码 provider，系统索引页展示本机作业锁、配置漂移以本机首次基线为准；本机监控每分钟采样（打开的控制台页采样当前目标，service worker 采样全部本机连接），只保存在本机，不伪造离线历史；账号由 Elasticsearch 自身认证。
 - **安装**：打开 `chrome://extensions` → 开启开发者模式 → **加载已解压的扩展程序** → 选择包含 `manifest.json` 的文件夹（源码为 `extensions/chrome`；Release zip 请先解压，不要直接选 zip）。
 
-细节与安全说明见 [extensions/chrome/README.md](extensions/chrome/README.md)。
+浏览器模式的能力矩阵与本机边界见 [docs/browser-mode.md](docs/browser-mode.md)，安装与安全说明见 [extensions/chrome/README.md](extensions/chrome/README.md)。
 
 ---
 
