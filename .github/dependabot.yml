@@ -1,3 +1,6 @@
+# Version-update PRs are paused for the 1.x release train so the repository stays
+# clean; Dependabot security updates remain enabled at the repository level.
+# Re-enable with a non-zero open-pull-requests-limit when the dependency batch is planned.
 version: 2
 updates:
   - package-ecosystem: maven
@@ -6,7 +9,7 @@ updates:
       interval: weekly
       day: monday
       time: "03:00"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       maven-minor-patch:
         patterns: ["*"]
@@ -24,7 +27,7 @@ updates:
       interval: weekly
       day: monday
       time: "03:15"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       ui-minor-patch:
         patterns: ["*"]
@@ -36,7 +39,7 @@ updates:
       interval: weekly
       day: monday
       time: "03:30"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       actions:
         patterns: ["*"]
