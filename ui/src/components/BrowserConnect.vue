@@ -31,6 +31,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue';
+import { api } from '../api';
 import { isBrowserMode } from '../platform/browserApi';
 import { profiles, upsertProfile } from '../platform/browserProfiles';
 
@@ -43,11 +44,20 @@ const authType = ref<'BASIC' | 'API_KEY'>('BASIC');
 const busy = ref(false);
 const err = ref('');
 
-function connect() {
+async function connect() {
   if (!url.value) return;
   if (!/^https?:\/\/.+/.test(url.value)) { err.value = '集群地址应为 http://host:9200 或 https://host:9200'; return; }
   busy.value = true; err.value = '';
   try {
+    /* 先真连一次再落档案：地址/凭据错误留在本弹层解释，不把坏档案写进 storage
+       再靠 reload 把用户甩进一个必然失败的控制台。 */
+    const probe = await api.setup.test({
+      url: url.value,
+      username: authType.value === 'BASIC' ? username.value : undefined,
+      password: password.value || undefined,
+      authType: authType.value,
+    });
+    if (!probe?.ok) throw new Error(probe?.message || '集群未返回有效响应');
     let name = url.value;
     try { name = new URL(url.value).hostname; } catch { /* 交给下方保存校验 */ }
     const saved = upsertProfile({
@@ -62,7 +72,8 @@ function connect() {
     }
     location.reload();
   } catch (e) {
-    err.value = String((e as any)?.message || e); busy.value = false;
+    err.value = '连接失败：' + String((e as any)?.message || e);
+    busy.value = false;
   }
 }
 function close() { show.value = false; }

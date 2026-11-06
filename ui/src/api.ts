@@ -800,7 +800,7 @@ export const api = {
   setup: {
     status: () => get<{ bound: boolean; mode: string; endpoint: string | null; appName: string; hostVisible: boolean; authEnabled?: boolean; builtinLogin?: boolean; setupTokenRequired?: boolean }>('/setup/status'),
     /* 可选首连令牌：配置 esquerystudio.elasticsearch.console.setup-token 后未绑定窗口必须携带（防匿名绑定）。 */
-    test: (c: { url: string; username?: string; password?: string }, setupToken?: string) =>
+    test: (c: { url: string; username?: string; password?: string; authType?: 'BASIC' | 'API_KEY' }, setupToken?: string) =>
       post<any>('/setup/test', c, undefined, setupToken ? { headers: { 'X-Setup-Token': setupToken } } : undefined),
     apply: (c: { url: string; username?: string; password?: string }, setupToken?: string) =>
       post<any>('/setup/apply', c, undefined, setupToken ? { headers: { 'X-Setup-Token': setupToken } } : undefined),
